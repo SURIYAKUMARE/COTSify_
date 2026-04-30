@@ -1,12 +1,27 @@
 ﻿"use client";
 import { useState, useEffect, Suspense } from "react";
-import RouteGuard from "@/components/RouteGuard";
-
 import { useSearchParams } from "next/navigation";
 import { CatalogProduct } from "@/lib/catalog-types";
-import CatalogProductCard from "@/components/CatalogProductCard";
-import CatalogFilters from "@/components/CatalogFilters";
+import RouteGuard from "@/components/RouteGuard";
 import { api } from "@/lib/api";
+import {
+  Search, SlidersHorizontal, Grid3X3, List, Star,
+  ShoppingCart, GitCompare, Heart, X, ChevronDown,
+  Cpu, Zap, Wrench, ExternalLink, BookOpen, TrendingDown,
+  Package, Filter, ArrowUpDown,
+} from "lucide-react";
+
+const CAT_ICONS: Record<string, React.ReactNode> = {
+  Electrical: <Zap className="w-4 h-4" />,
+  Mechanical: <Wrench className="w-4 h-4" />,
+  Tools: <Package className="w-4 h-4" />,
+};
+
+const CAT_COLORS: Record<string, string> = {
+  Electrical: "bg-cyan-950 text-cyan-400 border-cyan-800",
+  Mechanical: "bg-green-950 text-green-400 border-green-800",
+  Tools: "bg-amber-950 text-amber-400 border-amber-800",
+};
 
 function CatalogContent() {
   const searchParams = useSearchParams();
@@ -16,6 +31,7 @@ function CatalogContent() {
   const [filtered, setFiltered] = useState<CatalogProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchInput, setSearchInput] = useState(projectQuery);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
@@ -23,6 +39,7 @@ function CatalogContent() {
   const [wishlist, setWishlist] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState("relevance");
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     if (projectQuery) fetchForProject(projectQuery);
@@ -33,8 +50,7 @@ function CatalogContent() {
     setLoading(true);
     try {
       const { data } = await api.get("/api/catalog/all");
-      setProducts(data);
-      setFiltered(data);
+      setProducts(data); setFiltered(data);
     } catch { setProducts([]); }
     setLoading(false);
   };
@@ -48,8 +64,7 @@ function CatalogContent() {
         ...analyzeRes.data.software.map((c: any) => c.name),
       ];
       const { data } = await api.post("/api/catalog/for-project", { component_names: names });
-      setProducts(data);
-      setFiltered(data);
+      setProducts(data); setFiltered(data);
     } catch { fetchAll(); }
     setLoading(false);
   };
@@ -66,30 +81,23 @@ function CatalogContent() {
     setLoading(false);
   };
 
-  const applyFilters = (
-    source: CatalogProduct[],
-    cat: string,
-    price: [number, number],
-    sort: string
-  ) => {
-    let result = [...source];
-    if (cat !== "All") result = result.filter(p => p.category === cat);
-    result = result.filter(p => !p.price_inr || (p.price_inr >= price[0] && p.price_inr <= price[1]));
-    if (sort === "price_asc") result.sort((a, b) => (a.price_inr || 0) - (b.price_inr || 0));
-    else if (sort === "price_desc") result.sort((a, b) => (b.price_inr || 0) - (a.price_inr || 0));
-    else if (sort === "rating") result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    setFiltered(result);
+  const applyFilters = (src: CatalogProduct[], cat: string, price: [number, number], sort: string) => {
+    let r = [...src];
+    if (cat !== "All") r = r.filter(p => p.category === cat);
+    r = r.filter(p => !p.price_inr || (p.price_inr >= price[0] && p.price_inr <= price[1]));
+    if (sort === "price_asc") r.sort((a, b) => (a.price_inr || 0) - (b.price_inr || 0));
+    else if (sort === "price_desc") r.sort((a, b) => (b.price_inr || 0) - (a.price_inr || 0));
+    else if (sort === "rating") r.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    setFiltered(r);
   };
 
   useEffect(() => { applyFilters(products, selectedCategory, priceRange, sortBy); }, [selectedCategory, priceRange, sortBy]);
 
-  const toggleCompare = (p: CatalogProduct) => {
+  const toggleCompare = (p: CatalogProduct) =>
     setCompareList(prev => prev.find(x => x.id === p.id) ? prev.filter(x => x.id !== p.id) : prev.length < 3 ? [...prev, p] : prev);
-  };
 
-  const toggleWishlist = (id: string) => {
+  const toggleWishlist = (id: string) =>
     setWishlist(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  };
 
   const categories = ["All", "Electrical", "Mechanical", "Tools"];
   const grouped = {
@@ -99,240 +107,312 @@ function CatalogContent() {
   };
 
   return (
-    <div style={{ fontFamily: "Times New Roman, serif", background: "#f5f5f5", minHeight: "100vh" }}>
-      {/* Header */}
-      <div style={{ background: "#cc0000", color: "white", padding: "0" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ fontSize: 24, fontWeight: "bold", letterSpacing: 2 }}>COTsify</div>
-            <div style={{ fontSize: 12, opacity: 0.85, borderLeft: "1px solid rgba(255,255,255,0.4)", paddingLeft: 16 }}>Engineering Component Catalog</div>
+    <div className="min-h-screen">
+      {/* ── Hero search bar ─────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden bg-gradient-to-b from-gray-900 to-transparent border-b border-gray-800 px-4 py-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(6,182,212,0.15),transparent)] pointer-events-none" />
+        <div className="max-w-3xl mx-auto relative">
+          <div className="flex items-center gap-2 justify-center mb-3">
+            <BookOpen className="w-5 h-5 text-cyan-400" />
+            <h1 className="text-white font-bold text-xl">Engineering Catalog</h1>
+            <span className="text-xs bg-cyan-950 text-cyan-400 border border-cyan-800 px-2 py-0.5 rounded-full">{filtered.length} products</span>
           </div>
-          <form onSubmit={handleSearch} style={{ display: "flex", gap: 0, flex: 1, maxWidth: 600 }}>
-            <input
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              placeholder="Search components, part numbers, specifications..."
-              style={{ flex: 1, padding: "10px 16px", border: "none", fontSize: 14, fontFamily: "Times New Roman, serif", outline: "none" }}
-            />
-            <button type="submit" style={{ background: "#333", color: "white", border: "none", padding: "10px 20px", cursor: "pointer", fontSize: 14, fontFamily: "Times New Roman, serif", fontWeight: "bold" }}>
-              SEARCH
-            </button>
+          <p className="text-gray-400 text-sm text-center mb-6">Search components, part numbers, specifications</p>
+
+          {/* Animated search bar */}
+          <form onSubmit={handleSearch}>
+            <div className={`relative flex items-center transition-all duration-300 ${searchFocused ? "scale-[1.02]" : "scale-100"}`}>
+              <div className={`absolute inset-0 rounded-2xl transition-all duration-300 ${searchFocused ? "shadow-[0_0_30px_rgba(6,182,212,0.3)] ring-2 ring-cyan-500/50" : "shadow-lg"}`} />
+              <Search className={`absolute left-5 w-5 h-5 transition-colors duration-300 ${searchFocused ? "text-cyan-400" : "text-gray-500"}`} />
+              <input
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                placeholder="e.g. Arduino, ESP32, Soil Moisture Sensor..."
+                className="relative w-full bg-gray-900 border border-gray-700 rounded-2xl pl-14 pr-36 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-600 transition-all text-sm"
+              />
+              <button type="submit"
+                className="absolute right-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold px-5 py-2.5 rounded-xl transition-all text-sm flex items-center gap-2">
+                <Search className="w-4 h-4" /> Search
+              </button>
+            </div>
           </form>
-          <div style={{ fontSize: 12, opacity: 0.85 }}>
-            {filtered.length} products found
+
+          {/* Quick category pills */}
+          <div className="flex gap-2 justify-center mt-4 flex-wrap">
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setSelectedCategory(cat)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-all ${selectedCategory === cat ? "bg-cyan-500 text-gray-950 border-cyan-500 font-semibold" : "bg-gray-900 text-gray-400 border-gray-700 hover:border-cyan-700 hover:text-cyan-400"}`}>
+                {cat !== "All" && CAT_ICONS[cat]}
+                {cat}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Sub-header nav */}
-      <div style={{ background: "#222", color: "white" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px", display: "flex", gap: 0 }}>
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setSelectedCategory(cat)}
-              style={{ padding: "10px 20px", background: selectedCategory === cat ? "#cc0000" : "transparent", color: "white", border: "none", cursor: "pointer", fontSize: 13, fontFamily: "Times New Roman, serif", borderRight: "1px solid #444" }}>
-              {cat === "All" ? "All Categories" : cat}
-            </button>
-          ))}
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, padding: "0 8px" }}>
-            <span style={{ fontSize: 12, color: "#aaa" }}>View:</span>
-            <button onClick={() => setViewMode("grid")} style={{ background: viewMode === "grid" ? "#cc0000" : "transparent", color: "white", border: "1px solid #555", padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>Grid</button>
-            <button onClick={() => setViewMode("list")} style={{ background: viewMode === "list" ? "#cc0000" : "transparent", color: "white", border: "1px solid #555", padding: "4px 10px", cursor: "pointer", fontSize: 12 }}>List</button>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "24px", display: "flex", gap: 24 }}>
-        {/* Sidebar filters */}
-        <div style={{ width: 220, flexShrink: 0 }}>
-          <div style={{ background: "white", border: "1px solid #ddd", padding: 16, marginBottom: 16 }}>
-            <div style={{ fontWeight: "bold", fontSize: 14, borderBottom: "2px solid #cc0000", paddingBottom: 8, marginBottom: 12 }}>FILTER BY PRICE</div>
-            <div style={{ fontSize: 13, marginBottom: 8 }}>Max: ₹{priceRange[1].toLocaleString()}</div>
+      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-6">
+        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+        <div className={`w-56 flex-shrink-0 flex-col gap-4 ${showFilters ? "flex" : "hidden lg:flex"}`}>
+          {/* Price filter */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+            <div className="flex items-center gap-2 text-white font-semibold text-sm mb-4">
+              <Filter className="w-4 h-4 text-cyan-400" /> Filter by Price
+            </div>
+            <div className="flex justify-between text-xs text-gray-400 mb-2">
+              <span>₹0</span><span className="text-cyan-400 font-medium">₹{priceRange[1].toLocaleString()}</span>
+            </div>
             <input type="range" min={0} max={10000} value={priceRange[1]}
               onChange={e => setPriceRange([0, Number(e.target.value)])}
-              style={{ width: "100%", accentColor: "#cc0000" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#666" }}>
-              <span>₹0</span><span>₹10,000</span>
+              className="w-full accent-cyan-500" />
+            <div className="flex justify-between text-xs text-gray-600 mt-1">
+              <span>Min</span><span>₹10,000</span>
             </div>
           </div>
 
-          <div style={{ background: "white", border: "1px solid #ddd", padding: 16, marginBottom: 16 }}>
-            <div style={{ fontWeight: "bold", fontSize: 14, borderBottom: "2px solid #cc0000", paddingBottom: 8, marginBottom: 12 }}>SORT BY</div>
-            {[["relevance","Relevance"],["price_asc","Price: Low to High"],["price_desc","Price: High to Low"],["rating","Best Rated"]].map(([val, label]) => (
-              <label key={val} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer", fontSize: 13 }}>
-                <input type="radio" name="sort" value={val} checked={sortBy === val} onChange={() => setSortBy(val)} style={{ accentColor: "#cc0000" }} />
-                {label}
+          {/* Sort */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+            <div className="flex items-center gap-2 text-white font-semibold text-sm mb-4">
+              <ArrowUpDown className="w-4 h-4 text-cyan-400" /> Sort By
+            </div>
+            {[["relevance","Relevance"],["price_asc","Price: Low → High"],["price_desc","Price: High → Low"],["rating","Best Rated"]].map(([val, label]) => (
+              <label key={val} className="flex items-center gap-2 mb-3 cursor-pointer group">
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${sortBy === val ? "border-cyan-500 bg-cyan-500" : "border-gray-600 group-hover:border-cyan-600"}`}>
+                  {sortBy === val && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                </div>
+                <input type="radio" name="sort" value={val} checked={sortBy === val} onChange={() => setSortBy(val)} className="hidden" />
+                <span className={`text-xs transition-colors ${sortBy === val ? "text-cyan-400 font-medium" : "text-gray-400 group-hover:text-gray-300"}`}>{label}</span>
               </label>
             ))}
           </div>
 
-          <div style={{ background: "white", border: "1px solid #ddd", padding: 16 }}>
-            <div style={{ fontWeight: "bold", fontSize: 14, borderBottom: "2px solid #cc0000", paddingBottom: 8, marginBottom: 12 }}>AVAILABILITY</div>
-            {["In Stock", "All Items"].map(opt => (
-              <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer", fontSize: 13 }}>
-                <input type="radio" name="avail" defaultChecked={opt === "In Stock"} style={{ accentColor: "#cc0000" }} />
-                {opt}
-              </label>
+          {/* Category */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4">
+            <div className="flex items-center gap-2 text-white font-semibold text-sm mb-4">
+              <Cpu className="w-4 h-4 text-cyan-400" /> Category
+            </div>
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setSelectedCategory(cat)}
+                className={`w-full flex items-center gap-2 text-xs px-3 py-2 rounded-xl mb-1.5 transition-all ${selectedCategory === cat ? "bg-cyan-950 text-cyan-400 border border-cyan-800" : "text-gray-400 hover:bg-gray-800 hover:text-gray-300"}`}>
+                {cat !== "All" ? CAT_ICONS[cat] : <Grid3X3 className="w-4 h-4" />}
+                {cat === "All" ? "All Categories" : cat}
+                <span className="ml-auto text-gray-600 text-xs">
+                  {cat === "All" ? filtered.length : filtered.filter(p => p.category === cat).length}
+                </span>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Main content */}
-        <div style={{ flex: 1 }}>
+        {/* ── Main content ─────────────────────────────────────────────────── */}
+        <div className="flex-1 min-w-0">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowFilters(!showFilters)}
+                className="lg:hidden flex items-center gap-1.5 text-sm bg-gray-900 border border-gray-700 text-gray-300 px-3 py-2 rounded-xl hover:border-cyan-700 transition-colors">
+                <SlidersHorizontal className="w-4 h-4" /> Filters
+              </button>
+              <span className="text-gray-400 text-sm">
+                <span className="text-white font-medium">{filtered.length}</span> products
+                {selectedCategory !== "All" && <span className="text-cyan-400"> in {selectedCategory}</span>}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 text-xs">View:</span>
+              <button onClick={() => setViewMode("grid")}
+                className={`p-2 rounded-lg transition-colors ${viewMode === "grid" ? "bg-cyan-950 text-cyan-400 border border-cyan-800" : "text-gray-500 hover:text-gray-300 border border-gray-700"}`}>
+                <Grid3X3 className="w-4 h-4" />
+              </button>
+              <button onClick={() => setViewMode("list")}
+                className={`p-2 rounded-lg transition-colors ${viewMode === "list" ? "bg-cyan-950 text-cyan-400 border border-cyan-800" : "text-gray-500 hover:text-gray-300 border border-gray-700"}`}>
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
           {loading ? (
-            <div style={{ textAlign: "center", padding: 80, fontSize: 16, color: "#666" }}>
-              Loading catalog...
+            <div className="flex flex-col items-center gap-4 py-24 text-gray-400">
+              <div className="w-10 h-10 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm">Loading catalog...</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 80, background: "white", border: "1px solid #ddd" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
-              <div style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>No components found</div>
-              <div style={{ color: "#666" }}>Try a different search term or browse all categories</div>
+            <div className="text-center py-24 bg-gray-900/50 border border-gray-800 rounded-2xl">
+              <div className="text-5xl mb-4">🔍</div>
+              <p className="text-white font-semibold mb-2">No components found</p>
+              <p className="text-gray-400 text-sm">Try a different search term</p>
             </div>
           ) : selectedCategory === "All" ? (
-            // Grouped by category
             Object.entries(grouped).map(([cat, items]) => items.length > 0 && (
-              <div key={cat} style={{ marginBottom: 32 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                  <div style={{ background: "#cc0000", color: "white", padding: "6px 16px", fontSize: 14, fontWeight: "bold", letterSpacing: 1 }}>
-                    {cat === "Electrical" ? "ELECTRICAL / ELECTRONIC COMPONENTS" : cat === "Mechanical" ? "MECHANICAL COMPONENTS" : "TOOLS & CONSUMABLES"}
+              <div key={cat} className="mb-10">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold ${CAT_COLORS[cat]}`}>
+                    {CAT_ICONS[cat]}
+                    {cat === "Electrical" ? "Electrical / Electronic" : cat === "Mechanical" ? "Mechanical Components" : "Tools & Consumables"}
                   </div>
-                  <div style={{ fontSize: 13, color: "#666" }}>{items.length} items</div>
+                  <span className="text-gray-500 text-sm">{items.length} items</span>
                 </div>
-                <div style={{ display: viewMode === "grid" ? "grid" : "flex", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", flexDirection: "column", gap: 16 }}>
-                  {items.map(p => (
-                    <ProductCard key={p.id} product={p} viewMode={viewMode}
-                      inCompare={!!compareList.find(x => x.id === p.id)}
-                      inWishlist={wishlist.has(p.id)}
-                      onCompare={() => toggleCompare(p)}
-                      onWishlist={() => toggleWishlist(p.id)}
-                      onView={() => setSelectedProduct(p)}
-                    />
-                  ))}
-                </div>
+                <ProductGrid items={items} viewMode={viewMode} compareList={compareList} wishlist={wishlist} onCompare={toggleCompare} onWishlist={toggleWishlist} onView={setSelectedProduct} />
               </div>
             ))
           ) : (
-            <div style={{ display: viewMode === "grid" ? "grid" : "flex", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", flexDirection: "column", gap: 16 }}>
-              {filtered.map(p => (
-                <ProductCard key={p.id} product={p} viewMode={viewMode}
-                  inCompare={!!compareList.find(x => x.id === p.id)}
-                  inWishlist={wishlist.has(p.id)}
-                  onCompare={() => toggleCompare(p)}
-                  onWishlist={() => toggleWishlist(p.id)}
-                  onView={() => setSelectedProduct(p)}
-                />
-              ))}
-            </div>
+            <ProductGrid items={filtered} viewMode={viewMode} compareList={compareList} wishlist={wishlist} onCompare={toggleCompare} onWishlist={toggleWishlist} onView={setSelectedProduct} />
           )}
         </div>
       </div>
 
       {/* Compare bar */}
       {compareList.length > 0 && (
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#222", color: "white", padding: "12px 24px", display: "flex", alignItems: "center", gap: 16, zIndex: 100 }}>
-          <span style={{ fontWeight: "bold", fontSize: 14 }}>COMPARE ({compareList.length}/3):</span>
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur border-t border-gray-800 px-4 py-3 flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-white font-semibold text-sm">
+            <GitCompare className="w-4 h-4 text-cyan-400" />
+            Compare ({compareList.length}/3):
+          </div>
           {compareList.map(p => (
-            <span key={p.id} style={{ background: "#cc0000", padding: "4px 12px", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+            <div key={p.id} className="flex items-center gap-2 bg-cyan-950 border border-cyan-800 text-cyan-300 text-xs px-3 py-1.5 rounded-full">
               {p.name}
-              <button onClick={() => toggleCompare(p)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>x</button>
-            </span>
+              <button onClick={() => toggleCompare(p)} className="text-cyan-500 hover:text-white transition-colors">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
           ))}
           {compareList.length >= 2 && (
-            <button style={{ marginLeft: "auto", background: "#cc0000", color: "white", border: "none", padding: "8px 20px", cursor: "pointer", fontFamily: "Times New Roman, serif", fontWeight: "bold" }}>
-              COMPARE NOW
+            <button className="ml-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold px-5 py-2 rounded-xl text-sm transition-all">
+              Compare Now
             </button>
           )}
         </div>
       )}
 
-      {/* Product detail modal */}
-      {selectedProduct && (
-        <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
-      )}
+      {/* Product modal */}
+      {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
     </div>
   );
 }
 
-function ProductCard({ product, viewMode, inCompare, inWishlist, onCompare, onWishlist, onView }: {
-  product: CatalogProduct; viewMode: "grid" | "list";
-  inCompare: boolean; inWishlist: boolean;
-  onCompare: () => void; onWishlist: () => void; onView: () => void;
+function ProductGrid({ items, viewMode, compareList, wishlist, onCompare, onWishlist, onView }: {
+  items: CatalogProduct[]; viewMode: "grid" | "list";
+  compareList: CatalogProduct[]; wishlist: Set<string>;
+  onCompare: (p: CatalogProduct) => void;
+  onWishlist: (id: string) => void;
+  onView: (p: CatalogProduct) => void;
 }) {
-  const catColor = product.category === "Electrical" ? "#0066cc" : product.category === "Mechanical" ? "#006633" : "#cc6600";
-
   if (viewMode === "list") {
     return (
-      <div style={{ background: "white", border: "1px solid #ddd", padding: 16, display: "flex", gap: 16, alignItems: "flex-start" }}>
-        <img src={product.image_url} alt={product.name} style={{ width: 100, height: 100, objectFit: "contain", border: "1px solid #eee", flexShrink: 0 }}
-          onError={e => { (e.target as HTMLImageElement).src = `https://placehold.co/100x100?text=${encodeURIComponent(product.name.split(" ")[0])}`; }} />
-        <div style={{ flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ background: catColor, color: "white", fontSize: 10, padding: "2px 8px", fontWeight: "bold" }}>{product.category.toUpperCase()}</span>
-            <span style={{ fontSize: 11, color: "#666" }}>Part No: {product.part_number}</span>
-          </div>
-          <div style={{ fontSize: 16, fontWeight: "bold", marginBottom: 4, cursor: "pointer", color: "#cc0000" }} onClick={onView}>{product.name}</div>
-          <div style={{ fontSize: 13, color: "#444", marginBottom: 8, lineHeight: 1.5 }}>{product.description}</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-            {Object.entries(product.specifications).slice(0, 4).map(([k, v]) => (
-              <span key={k} style={{ fontSize: 11, background: "#f0f0f0", padding: "2px 8px", border: "1px solid #ddd" }}><b>{k}:</b> {v}</span>
-            ))}
-          </div>
-        </div>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: 22, fontWeight: "bold", color: "#cc0000" }}>{product.price_inr ? `₹${product.price_inr.toLocaleString()}` : "POA"}</div>
-          {product.price_usd && <div style={{ fontSize: 12, color: "#666" }}>${product.price_usd}</div>}
-          <div style={{ fontSize: 11, color: product.availability === "in_stock" ? "#006600" : "#cc0000", marginBottom: 8 }}>
-            {product.availability === "in_stock" ? `In Stock (${product.stock_qty || "Available"})` : "Out of Stock"}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <a href={Object.values(product.buy_urls)[0]} target="_blank" rel="noopener noreferrer"
-              style={{ background: "#cc0000", color: "white", padding: "8px 16px", textDecoration: "none", fontSize: 13, fontWeight: "bold", textAlign: "center", display: "block" }}>
-              BUY NOW
-            </a>
-            <button onClick={onCompare} style={{ background: inCompare ? "#333" : "white", color: inCompare ? "white" : "#333", border: "1px solid #333", padding: "6px 12px", cursor: "pointer", fontSize: 12, fontFamily: "Times New Roman, serif" }}>
-              {inCompare ? "REMOVE" : "+ COMPARE"}
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-col gap-3">
+        {items.map(p => <ProductListCard key={p.id} product={p} inCompare={!!compareList.find(x => x.id === p.id)} inWishlist={wishlist.has(p.id)} onCompare={() => onCompare(p)} onWishlist={() => onWishlist(p.id)} onView={() => onView(p)} />)}
       </div>
     );
   }
-
   return (
-    <div style={{ background: "white", border: "1px solid #ddd", display: "flex", flexDirection: "column", position: "relative" }}>
-      <div style={{ position: "absolute", top: 8, left: 8, background: catColor, color: "white", fontSize: 10, padding: "2px 8px", fontWeight: "bold", zIndex: 1 }}>
-        {product.subcategory.toUpperCase()}
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {items.map(p => <ProductGridCard key={p.id} product={p} inCompare={!!compareList.find(x => x.id === p.id)} inWishlist={wishlist.has(p.id)} onCompare={() => onCompare(p)} onWishlist={() => onWishlist(p.id)} onView={() => onView(p)} />)}
+    </div>
+  );
+}
+
+function ProductGridCard({ product, inCompare, inWishlist, onCompare, onWishlist, onView }: {
+  product: CatalogProduct; inCompare: boolean; inWishlist: boolean;
+  onCompare: () => void; onWishlist: () => void; onView: () => void;
+}) {
+  const catClass = CAT_COLORS[product.category] || "bg-gray-800 text-gray-400 border-gray-700";
+  return (
+    <div className="group bg-gray-900 border border-gray-800 hover:border-cyan-700 rounded-2xl overflow-hidden transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-cyan-500/10 flex flex-col">
+      {/* Image */}
+      <div className="relative bg-gray-800 p-4 flex items-center justify-center h-44 cursor-pointer" onClick={onView}>
+        <img src={product.image_url} alt={product.name} className="max-h-36 max-w-full object-contain"
+          onError={e => { (e.target as HTMLImageElement).src = `https://placehold.co/160x160/1f2937/06b6d4?text=${encodeURIComponent(product.name.split(" ")[0])}`; }} />
+        <button onClick={e => { e.stopPropagation(); onWishlist(); }}
+          className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all ${inWishlist ? "bg-pink-500 text-white" : "bg-gray-700/80 text-gray-400 hover:bg-pink-500/20 hover:text-pink-400"}`}>
+          <Heart className="w-4 h-4" fill={inWishlist ? "currentColor" : "none"} />
+        </button>
+        <div className={`absolute top-3 left-3 flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${catClass}`}>
+          {CAT_ICONS[product.category]}
+          {product.subcategory}
+        </div>
       </div>
-      <button onClick={onWishlist} style={{ position: "absolute", top: 8, right: 8, background: "none", border: "none", cursor: "pointer", fontSize: 18, zIndex: 1 }}>
-        {inWishlist ? "♥" : "♡"}
-      </button>
-      <div style={{ padding: 16, display: "flex", justifyContent: "center", borderBottom: "1px solid #eee", cursor: "pointer" }} onClick={onView}>
-        <img src={product.image_url} alt={product.name} style={{ width: 160, height: 160, objectFit: "contain" }}
-          onError={e => { (e.target as HTMLImageElement).src = `https://placehold.co/160x160?text=${encodeURIComponent(product.name.split(" ")[0])}`; }} />
-      </div>
-      <div style={{ padding: 12, flex: 1, display: "flex", flexDirection: "column" }}>
-        <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>Part No: {product.part_number}</div>
-        <div style={{ fontSize: 14, fontWeight: "bold", marginBottom: 6, cursor: "pointer", color: "#cc0000", lineHeight: 1.3 }} onClick={onView}>{product.name}</div>
-        <div style={{ fontSize: 12, color: "#555", marginBottom: 8, lineHeight: 1.4, flex: 1 }}>{product.description.slice(0, 80)}...</div>
+
+      <div className="p-4 flex flex-col flex-1">
+        <p className="text-gray-500 text-xs mb-1">Part: {product.part_number}</p>
+        <h3 className="text-white font-semibold text-sm mb-2 leading-snug cursor-pointer hover:text-cyan-400 transition-colors line-clamp-2" onClick={onView}>
+          {product.name}
+        </h3>
         {product.rating && (
-          <div style={{ fontSize: 12, color: "#f90", marginBottom: 8 }}>
-            {"★".repeat(Math.round(product.rating))}{"☆".repeat(5 - Math.round(product.rating))}
-            <span style={{ color: "#666", marginLeft: 4 }}>({product.reviews?.toLocaleString()})</span>
+          <div className="flex items-center gap-1 mb-2">
+            <div className="flex">
+              {[1,2,3,4,5].map(i => (
+                <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating!) ? "text-yellow-400 fill-yellow-400" : "text-gray-600"}`} />
+              ))}
+            </div>
+            <span className="text-gray-500 text-xs">({product.reviews?.toLocaleString()})</span>
           </div>
         )}
-        <div style={{ fontSize: 20, fontWeight: "bold", color: "#cc0000", marginBottom: 4 }}>
-          {product.price_inr ? `₹${product.price_inr.toLocaleString()}` : "Price on Application"}
+        <div className="mt-auto">
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="text-xl font-bold text-cyan-400">{product.price_inr ? `₹${product.price_inr.toLocaleString()}` : "POA"}</span>
+            {product.price_usd && <span className="text-gray-500 text-xs">${product.price_usd}</span>}
+          </div>
+          <div className={`text-xs mb-3 font-medium ${product.availability === "in_stock" ? "text-green-400" : "text-red-400"}`}>
+            {product.availability === "in_stock" ? `● In Stock (${product.stock_qty || "Available"})` : "● Out of Stock"}
+          </div>
+          <a href={Object.values(product.buy_urls)[0]} target="_blank" rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-all mb-2">
+            <ShoppingCart className="w-4 h-4" /> Add to Cart
+          </a>
+          <button onClick={onCompare}
+            className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs border transition-all ${inCompare ? "bg-cyan-950 text-cyan-400 border-cyan-700" : "bg-gray-800 text-gray-400 border-gray-700 hover:border-cyan-700 hover:text-cyan-400"}`}>
+            <GitCompare className="w-3.5 h-3.5" />
+            {inCompare ? "Remove" : "+ Compare"}
+          </button>
         </div>
-        <div style={{ fontSize: 11, color: product.availability === "in_stock" ? "#006600" : "#cc0000", marginBottom: 12 }}>
+      </div>
+    </div>
+  );
+}
+
+function ProductListCard({ product, inCompare, inWishlist, onCompare, onWishlist, onView }: {
+  product: CatalogProduct; inCompare: boolean; inWishlist: boolean;
+  onCompare: () => void; onWishlist: () => void; onView: () => void;
+}) {
+  const catClass = CAT_COLORS[product.category] || "bg-gray-800 text-gray-400 border-gray-700";
+  return (
+    <div className="bg-gray-900 border border-gray-800 hover:border-cyan-700 rounded-2xl p-4 flex gap-4 transition-all">
+      <div className="w-24 h-24 bg-gray-800 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer" onClick={onView}>
+        <img src={product.image_url} alt={product.name} className="max-h-20 max-w-20 object-contain"
+          onError={e => { (e.target as HTMLImageElement).src = `https://placehold.co/80x80/1f2937/06b6d4?text=${encodeURIComponent(product.name.split(" ")[0])}`; }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <span className={`text-xs px-2 py-0.5 rounded-full border flex items-center gap-1 ${catClass}`}>
+            {CAT_ICONS[product.category]}{product.subcategory}
+          </span>
+          <span className="text-gray-500 text-xs">Part: {product.part_number}</span>
+        </div>
+        <h3 className="text-white font-semibold text-sm mb-1 cursor-pointer hover:text-cyan-400 transition-colors" onClick={onView}>{product.name}</h3>
+        <p className="text-gray-400 text-xs mb-2 line-clamp-2">{product.description}</p>
+        <div className="flex flex-wrap gap-1">
+          {Object.entries(product.specifications).slice(0, 3).map(([k, v]) => (
+            <span key={k} className="text-xs bg-gray-800 border border-gray-700 text-gray-400 px-2 py-0.5 rounded-full"><b>{k}:</b> {v}</span>
+          ))}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-2 flex-shrink-0">
+        <div className="text-xl font-bold text-cyan-400">{product.price_inr ? `₹${product.price_inr.toLocaleString()}` : "POA"}</div>
+        <div className={`text-xs font-medium ${product.availability === "in_stock" ? "text-green-400" : "text-red-400"}`}>
           {product.availability === "in_stock" ? "In Stock" : "Out of Stock"}
         </div>
         <a href={Object.values(product.buy_urls)[0]} target="_blank" rel="noopener noreferrer"
-          style={{ background: "#cc0000", color: "white", padding: "8px", textDecoration: "none", fontSize: 13, fontWeight: "bold", textAlign: "center", display: "block", marginBottom: 6 }}>
-          ADD TO CART
+          className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold px-4 py-2 rounded-xl text-xs transition-all">
+          <ShoppingCart className="w-3.5 h-3.5" /> Buy
         </a>
         <button onClick={onCompare}
-          style={{ background: inCompare ? "#333" : "white", color: inCompare ? "white" : "#333", border: "1px solid #ccc", padding: "6px", cursor: "pointer", fontSize: 12, fontFamily: "Times New Roman, serif", width: "100%" }}>
-          {inCompare ? "REMOVE FROM COMPARE" : "+ ADD TO COMPARE"}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border transition-all ${inCompare ? "bg-cyan-950 text-cyan-400 border-cyan-700" : "bg-gray-800 text-gray-400 border-gray-700 hover:border-cyan-700"}`}>
+          <GitCompare className="w-3 h-3" />{inCompare ? "Remove" : "Compare"}
+        </button>
+        <button onClick={onWishlist}
+          className={`p-1.5 rounded-lg transition-colors ${inWishlist ? "text-pink-400" : "text-gray-600 hover:text-pink-400"}`}>
+          <Heart className="w-4 h-4" fill={inWishlist ? "currentColor" : "none"} />
         </button>
       </div>
     </div>
@@ -341,65 +421,70 @@ function ProductCard({ product, viewMode, inCompare, inWishlist, onCompare, onWi
 
 function ProductModal({ product, onClose }: { product: CatalogProduct; onClose: () => void }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ background: "white", maxWidth: 900, width: "100%", maxHeight: "90vh", overflow: "auto", fontFamily: "Times New Roman, serif" }}>
-        <div style={{ background: "#cc0000", color: "white", padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontWeight: "bold", fontSize: 16 }}>PRODUCT DETAILS</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "white", fontSize: 24, cursor: "pointer", lineHeight: 1 }}>x</button>
-        </div>
-        <div style={{ padding: 24, display: "grid", gridTemplateColumns: "280px 1fr", gap: 24 }}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-gray-950 border border-gray-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-gradient-to-r from-cyan-950/50 to-blue-950/50">
           <div>
-            <img src={product.image_url} alt={product.name} style={{ width: "100%", border: "1px solid #eee" }}
-              onError={e => { (e.target as HTMLImageElement).src = `https://placehold.co/280x280?text=${encodeURIComponent(product.name.split(" ")[0])}`; }} />
-            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
-              {Object.entries(product.buy_urls).map(([platform, url]) => (
-                <a key={platform} href={url} target="_blank" rel="noopener noreferrer"
-                  style={{ background: platform === "Amazon" ? "#ff9900" : platform === "Flipkart" ? "#2874f0" : "#cc0000", color: "white", padding: "10px", textDecoration: "none", fontSize: 13, fontWeight: "bold", textAlign: "center", display: "block" }}>
-                  BUY ON {platform.toUpperCase()}
-                </a>
-              ))}
-              {product.datasheet_url && (
-                <a href={product.datasheet_url} target="_blank" rel="noopener noreferrer"
-                  style={{ background: "#333", color: "white", padding: "8px", textDecoration: "none", fontSize: 12, textAlign: "center", display: "block" }}>
-                  DOWNLOAD DATASHEET
-                </a>
+            <h2 className="text-white font-bold text-lg">{product.name}</h2>
+            <p className="text-gray-400 text-xs">Part No: {product.part_number} · {product.manufacturer}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-xl">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-6">
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div>
+              <div className="bg-gray-900 rounded-2xl p-6 flex items-center justify-center mb-4 h-52">
+                <img src={product.image_url} alt={product.name} className="max-h-44 max-w-full object-contain"
+                  onError={e => { (e.target as HTMLImageElement).src = `https://placehold.co/200x200/111827/06b6d4?text=${encodeURIComponent(product.name.split(" ")[0])}`; }} />
+              </div>
+              <div className="flex items-baseline gap-3 mb-2">
+                <span className="text-3xl font-bold text-cyan-400">{product.price_inr ? `₹${product.price_inr.toLocaleString()}` : "POA"}</span>
+                {product.price_usd && <span className="text-gray-500 text-sm">${product.price_usd} USD</span>}
+              </div>
+              <div className={`text-sm font-medium mb-4 ${product.availability === "in_stock" ? "text-green-400" : "text-red-400"}`}>
+                {product.availability === "in_stock" ? `● In Stock — ${product.stock_qty || "Available"} units` : "● Out of Stock"}
+              </div>
+              <div className="flex flex-col gap-2">
+                {Object.entries(product.buy_urls).map(([platform, url]) => (
+                  <a key={platform} href={url} target="_blank" rel="noopener noreferrer"
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${platform === "Amazon" ? "bg-amber-500 hover:bg-amber-400 text-gray-950" : platform === "Flipkart" ? "bg-blue-600 hover:bg-blue-500 text-white" : "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white"}`}>
+                    <ExternalLink className="w-4 h-4" /> Buy on {platform}
+                  </a>
+                ))}
+                {product.datasheet_url && (
+                  <a href={product.datasheet_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition-all">
+                    <BookOpen className="w-4 h-4" /> Download Datasheet
+                  </a>
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-gray-400 text-sm leading-relaxed mb-5">{product.description}</p>
+              <h4 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-cyan-400" /> Specifications
+              </h4>
+              <div className="bg-gray-900 rounded-xl overflow-hidden mb-5">
+                {Object.entries(product.specifications).map(([k, v], i) => (
+                  <div key={k} className={`flex text-xs px-4 py-2.5 ${i % 2 === 0 ? "bg-gray-900" : "bg-gray-800/50"}`}>
+                    <span className="text-gray-400 font-medium w-2/5">{k}</span>
+                    <span className="text-white w-3/5">{v}</span>
+                  </div>
+                ))}
+              </div>
+              {product.alternatives.length > 0 && (
+                <>
+                  <h4 className="text-white font-semibold text-sm mb-3">Alternatives</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {product.alternatives.map(alt => (
+                      <span key={alt} className="text-xs bg-gray-800 border border-gray-700 text-gray-300 px-3 py-1.5 rounded-full">{alt}</span>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 11, color: "#666", marginBottom: 4 }}>Part Number: <b>{product.part_number}</b> | Manufacturer: <b>{product.manufacturer}</b></div>
-            <h2 style={{ fontSize: 22, fontWeight: "bold", marginBottom: 8, color: "#222" }}>{product.name}</h2>
-            <div style={{ fontSize: 24, fontWeight: "bold", color: "#cc0000", marginBottom: 4 }}>
-              {product.price_inr ? `₹${product.price_inr.toLocaleString()}` : "Price on Application"}
-              {product.price_usd && <span style={{ fontSize: 14, color: "#666", marginLeft: 8 }}>(${product.price_usd} USD)</span>}
-            </div>
-            <div style={{ fontSize: 13, color: product.availability === "in_stock" ? "#006600" : "#cc0000", marginBottom: 16, fontWeight: "bold" }}>
-              {product.availability === "in_stock" ? `In Stock - ${product.stock_qty || "Available"} units` : "Out of Stock"}
-            </div>
-            <div style={{ fontSize: 14, color: "#444", lineHeight: 1.7, marginBottom: 20, borderBottom: "1px solid #eee", paddingBottom: 16 }}>{product.description}</div>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontWeight: "bold", fontSize: 14, marginBottom: 10, color: "#cc0000", borderBottom: "2px solid #cc0000", paddingBottom: 4 }}>TECHNICAL SPECIFICATIONS</div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <tbody>
-                  {Object.entries(product.specifications).map(([k, v]) => (
-                    <tr key={k} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "6px 12px", background: "#f5f5f5", fontWeight: "bold", width: "40%" }}>{k}</td>
-                      <td style={{ padding: "6px 12px" }}>{v}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {product.alternatives.length > 0 && (
-              <div>
-                <div style={{ fontWeight: "bold", fontSize: 14, marginBottom: 10, color: "#cc0000", borderBottom: "2px solid #cc0000", paddingBottom: 4 }}>ALTERNATIVE COMPONENTS</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {product.alternatives.map(alt => (
-                    <span key={alt} style={{ background: "#f0f0f0", border: "1px solid #ddd", padding: "4px 12px", fontSize: 12 }}>{alt}</span>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -410,7 +495,7 @@ function ProductModal({ product, onClose }: { product: CatalogProduct; onClose: 
 export default function CatalogPage() {
   return (
     <RouteGuard>
-      <Suspense fallback={<div style={{ fontFamily: "Times New Roman, serif", textAlign: "center", padding: 80 }}>Loading catalog...</div>}>
+      <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" /></div>}>
         <CatalogContent />
       </Suspense>
     </RouteGuard>
