@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import Navbar from "@/components/Navbar";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ChatWidget from "@/components/ChatWidget";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthProvider>
             <Navbar />
             <main>{children}</main>
+            <ChatWidget />
           </AuthProvider>
         </ErrorBoundary>
       </body>
