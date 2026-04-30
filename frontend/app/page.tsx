@@ -1,6 +1,9 @@
 "use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import Link from "next/link";
-import { Cpu, Search, MapPin, BarChart3, Shield, Zap, ArrowRight, BookOpen, Bot } from "lucide-react";
+import { Cpu, Search, MapPin, BarChart3, Shield, Zap, ArrowRight, BookOpen, Bot, Loader2 } from "lucide-react";
 
 const FEATURES = [
   { icon: <Cpu className="w-5 h-5" />, title: "AI Component Extraction", desc: "Paste any project title and get a full BOM — hardware and software — in seconds.", color: "from-cyan-500 to-blue-500" },
@@ -25,6 +28,28 @@ const STATS = [
 ];
 
 export default function HomePage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace("/auth/signin");
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <div className="flex items-center gap-2 text-2xl font-bold">
+          <Cpu className="w-7 h-7 text-cyan-400" />
+          <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">COTsify</span>
+        </div>
+        <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
   return (
     <div className="flex flex-col relative">
 

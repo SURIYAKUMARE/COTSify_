@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -10,7 +10,13 @@ type Mode = "email" | "phone";
 
 export default function SignInPage() {
   const router = useRouter();
-  const { signInGuest } = useAuth();
+  const { signInGuest, user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/");
+    }
+  }, [user, loading, router]);
   const supabaseReady = isSupabaseConfigured();
 
   const [mode, setMode] = useState<Mode>("email");

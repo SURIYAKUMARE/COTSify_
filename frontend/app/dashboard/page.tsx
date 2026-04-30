@@ -4,8 +4,17 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { getProjects, deleteProjectLocal, SavedProject } from "@/lib/local-storage";
 import { LayoutDashboard, Search, Trash2, Bookmark, Cpu, Code, Clock, ExternalLink, User } from "lucide-react";
+import RouteGuard from "@/components/RouteGuard";
 
 export default function DashboardPage() {
+  return (
+    <RouteGuard>
+      <DashboardContent />
+    </RouteGuard>
+  );
+}
+
+function DashboardContent() {
   const { user } = useAuth();
   const [projects, setProjects] = useState<SavedProject[]>([]);
   const [loading, setLoading] = useState(true);

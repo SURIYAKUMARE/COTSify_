@@ -292,10 +292,15 @@ function CompareRow({ comparison }: { comparison: PriceComparison }) {
   );
 }
 
+import RouteGuard from "@/components/RouteGuard";
+
+// ... existing imports ...
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div>}>
-      <SearchContent />
-    </Suspense>
+    <RouteGuard>
+      <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div>}>
+        <SearchContent />
+      </Suspense>
+    </RouteGuard>
   );
 }

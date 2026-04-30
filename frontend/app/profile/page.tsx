@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { getProjects, SavedProject } from "@/lib/local-storage";
+import RouteGuard from "@/components/RouteGuard";
 import {
   User, Mail, Calendar, Cpu, Code, Bookmark,
   FolderOpen, TrendingUp, Clock, Search, ChevronRight,
@@ -10,6 +11,14 @@ import {
 } from "lucide-react";
 
 export default function ProfilePage() {
+  return (
+    <RouteGuard>
+      <ProfileContent />
+    </RouteGuard>
+  );
+}
+
+function ProfileContent() {
   const { user, updateProfile, signOut } = useAuth();
   const [projects, setProjects] = useState<SavedProject[]>([]);
 

@@ -1,5 +1,7 @@
 ﻿"use client";
 import { useState, useEffect, Suspense } from "react";
+import RouteGuard from "@/components/RouteGuard";
+
 import { useSearchParams } from "next/navigation";
 import { CatalogProduct } from "@/lib/catalog-types";
 import CatalogProductCard from "@/components/CatalogProductCard";
@@ -407,9 +409,10 @@ function ProductModal({ product, onClose }: { product: CatalogProduct; onClose: 
 
 export default function CatalogPage() {
   return (
-    <Suspense fallback={<div style={{ fontFamily: "Times New Roman, serif", textAlign: "center", padding: 80 }}>Loading catalog...</div>}>
-      <CatalogContent />
-    </Suspense>
+    <RouteGuard>
+      <Suspense fallback={<div style={{ fontFamily: "Times New Roman, serif", textAlign: "center", padding: 80 }}>Loading catalog...</div>}>
+        <CatalogContent />
+      </Suspense>
+    </RouteGuard>
   );
 }
-
