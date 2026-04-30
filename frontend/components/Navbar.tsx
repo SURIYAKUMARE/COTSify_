@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { Cpu, Search, LayoutDashboard, User, LogOut } from "lucide-react";
+import { Cpu, Search, LayoutDashboard, User, LogOut, BookOpen } from "lucide-react";
 
 export default function Navbar() {
   const path = usePathname();
@@ -29,6 +29,10 @@ export default function Navbar() {
           <Link href="/search" className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-colors ${active("/search")}`}>
             <Search className="w-4 h-4" />
             <span className="hidden sm:inline">Search</span>
+          </Link>
+          <Link href="/catalog" className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-colors ${active("/catalog")}`}>
+            <BookOpen className="w-4 h-4" />
+            <span className="hidden sm:inline">Catalog</span>
           </Link>
           <Link href="/dashboard" className={`flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg transition-colors ${active("/dashboard")}`}>
             <LayoutDashboard className="w-4 h-4" />

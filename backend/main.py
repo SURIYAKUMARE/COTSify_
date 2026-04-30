@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.routes import analyze, stores, compare, projects, auth
+from app.api.routes import analyze, stores, compare, projects, auth, catalog
 
 app = FastAPI(
     title="COTsify API",
@@ -22,6 +22,7 @@ app.include_router(analyze.router, prefix="/api/analyze", tags=["analyze"])
 app.include_router(stores.router, prefix="/api/stores", tags=["stores"])
 app.include_router(compare.router, prefix="/api/compare", tags=["compare"])
 app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
+app.include_router(catalog.router, prefix="/api/catalog", tags=["catalog"])
 
 
 @app.get("/")

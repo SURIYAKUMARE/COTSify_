@@ -6,7 +6,7 @@ import { saveProjectLocal } from "@/lib/local-storage";
 import ComponentCard from "@/components/ComponentCard";
 import PriceCompareModal from "@/components/PriceCompareModal";
 import NearbyStoresPanel from "@/components/NearbyStoresPanel";
-import { Search, Loader2, Cpu, Code, MapPin, BarChart3, Save, CheckCircle, AlertCircle } from "lucide-react";
+import { Search, Loader2, Cpu, Code, MapPin, BarChart3, Save, CheckCircle, AlertCircle, BookOpen } from "lucide-react";
 
 type Tab = "hardware" | "software" | "stores" | "compare";
 
@@ -155,6 +155,13 @@ function SearchContent() {
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
                 {saved ? "Saved!" : "Save project"}
               </button>
+              <a
+                href={`/catalog?project=${encodeURIComponent(result.project_title)}`}
+                className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-white border border-red-600 transition-colors"
+              >
+                <BookOpen className="w-4 h-4" />
+                View in Catalog
+              </a>
             </div>
           </div>
 
