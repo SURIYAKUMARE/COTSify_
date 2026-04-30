@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "COTsify Frontend",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/frontend"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "COTsify Backend",
+            "runtimeExecutable": "${env:LOCALAPPDATA}/Programs/Python/Python313/python.exe",
+            "runtimeArgs": ["-m", "uvicorn", "main:app", "--reload", "--port", "8000"],
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "COTsify Full Stack",
+            "configurations": ["COTsify Frontend", "COTsify Backend"]
+        }
+    ]
+}
