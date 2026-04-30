@@ -4,8 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import Navbar from "@/components/Navbar";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import ChatWidget from "@/components/ChatWidget";
-import AntiGravityBackground from "@/components/AntiGravityBackground";
+import ClientOnlyWidgets from "@/components/ClientOnlyWidgets";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 
@@ -19,11 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${geist.variable} h-full`}>
       <body className="min-h-full bg-gray-950 text-white antialiased">
         <ErrorBoundary>
-          <AntiGravityBackground />
           <AuthProvider>
+            <ClientOnlyWidgets />
             <Navbar />
             <main className="relative z-10">{children}</main>
-            <ChatWidget />
           </AuthProvider>
         </ErrorBoundary>
       </body>
