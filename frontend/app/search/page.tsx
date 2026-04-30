@@ -7,6 +7,7 @@ import ComponentCard from "@/components/ComponentCard";
 import PriceCompareModal from "@/components/PriceCompareModal";
 import NearbyStoresPanel from "@/components/NearbyStoresPanel";
 import { Search, Loader2, Cpu, Code, MapPin, BarChart3, Save, CheckCircle, AlertCircle, BookOpen } from "lucide-react";
+import SearchEmptyState from "@/components/SearchEmptyState";
 
 type Tab = "hardware" | "software" | "stores" | "compare";
 
@@ -131,6 +132,15 @@ function SearchContent() {
           <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
           <p>Analyzing project with AI...</p>
         </div>
+      )}
+
+      {/* Empty state — shown when no search yet */}
+      {!loading && !result && !error && (
+        <SearchEmptyState onSelect={(title) => {
+          setInputValue(title);
+          setQuery(title);
+          handleSearch(title);
+        }} />
       )}
 
       {/* Results */}
