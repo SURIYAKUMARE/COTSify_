@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -10,13 +10,11 @@ type Mode = "email" | "phone";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const { signUpGuest, user, loading } = useAuth();
+  const { signUpGuest, user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!loading && user) {
-      router.replace("/");
-    }
-  }, [user, loading, router]);
+    if (!authLoading && user) router.replace("/");
+  }, [user, authLoading, router]);
   const supabaseReady = isSupabaseConfigured();
 
   const [mode, setMode] = useState<Mode>("email");
@@ -27,27 +25,27 @@ export default function SignUpPage() {
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [showPw, setShowPw] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setSubmitting(true);
     const result = await signUpGuest(email, password, fullName);
-    if (result.error) { setError(result.error); setLoading(false); }
+    if (result.error) { setError(result.error); setSubmitting(false); }
     else router.push("/dashboard");
   };
 
   const handleGoogle = async () => {
     const sb = getSupabaseClient();
     if (!sb) { setError("Configure Supabase credentials to enable Google login."); return; }
-    setLoading(true);
+    setSubmitting(true);
     const { error } = await sb.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/dashboard` },
     });
-    if (error) { setError(error.message); setLoading(false); }
+    if (error) { setError(error.message); setSubmitting(false); }
   };
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -56,10 +54,10 @@ export default function SignUpPage() {
     if (!phone.trim()) { setError("Enter a valid phone number with country code."); return; }
     const sb = getSupabaseClient();
     if (!sb) { setError("Configure Supabase credentials to enable phone login."); return; }
-    setLoading(true);
+    setSubmitting(true);
     const { error } = await sb.auth.signInWithOtp({ phone });
-    if (error) { setError(error.message); setLoading(false); }
-    else { setOtpSent(true); setLoading(false); }
+    if (error) { setError(error.message); setSubmitting(false); }
+    else { setOtpSent(true); setSubmitting(false); }
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -67,9 +65,9 @@ export default function SignUpPage() {
     setError("");
     const sb = getSupabaseClient();
     if (!sb) return;
-    setLoading(true);
+    setSubmitting(true);
     const { error } = await sb.auth.verifyOtp({ phone, token: otp, type: "sms" });
-    if (error) { setError(error.message); setLoading(false); }
+    if (error) { setError(error.message); setSubmitting(false); }
     else router.push("/dashboard");
   };
 
@@ -87,7 +85,7 @@ export default function SignUpPage() {
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col gap-5">
 
           {/* Google */}
-          <button onClick={handleGoogle} disabled={loading}
+          <button onClick={handleGoogle} disabled={submitting}
             className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 disabled:opacity-50 text-gray-900 font-medium py-2.5 rounded-xl transition-colors">
             <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -147,9 +145,9 @@ export default function SignUpPage() {
                   </button>
                 </div>
               </div>
-              <button type="submit" disabled={loading}
+              <button type="submit" disabled={submitting}
                 className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-gray-950 font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                 Create account
               </button>
             </form>
@@ -165,9 +163,9 @@ export default function SignUpPage() {
                   placeholder="+91 98765 43210" />
                 <p className="text-xs text-gray-500 mt-1">Include country code (e.g. +91 for India)</p>
               </div>
-              <button type="submit" disabled={loading}
+              <button type="submit" disabled={submitting}
                 className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-gray-950 font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
                 Send OTP
                 {!supabaseReady && <span className="text-xs opacity-70">(needs Supabase)</span>}
               </button>
@@ -177,7 +175,7 @@ export default function SignUpPage() {
           {mode === "phone" && otpSent && (
             <form onSubmit={handleVerifyOtp} className="flex flex-col gap-4">
               <div className="text-center">
-                <div className="text-2xl mb-2">📱</div>
+                <div className="text-2xl mb-2">ðŸ“±</div>
                 <p className="text-white font-medium">OTP sent to {phone}</p>
                 <p className="text-gray-400 text-sm mt-1">Enter the 6-digit code from your SMS</p>
               </div>
@@ -189,14 +187,14 @@ export default function SignUpPage() {
                   className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-cyan-600 transition-colors text-center text-2xl tracking-widest font-mono"
                   placeholder="000000" />
               </div>
-              <button type="submit" disabled={loading || otp.length < 6}
+              <button type="submit" disabled={submitting || otp.length < 6}
                 className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-gray-950 font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                 Verify & Sign up
               </button>
               <button type="button" onClick={() => { setOtpSent(false); setOtp(""); }}
                 className="text-sm text-gray-500 hover:text-gray-300 text-center">
-                ← Change number
+                â† Change number
               </button>
             </form>
           )}
@@ -210,3 +208,4 @@ export default function SignUpPage() {
     </div>
   );
 }
+
