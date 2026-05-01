@@ -2,13 +2,13 @@
 import dynamic from "next/dynamic";
 
 const AntiGravityBackground = dynamic(
-  () => import("@/components/AntiGravityBackground"),
-  { ssr: false }
+  () => import("@/components/AntiGravityBackground").catch(() => ({ default: () => null })),
+  { ssr: false, loading: () => null }
 );
 
 const ChatWidget = dynamic(
-  () => import("@/components/ChatWidget"),
-  { ssr: false }
+  () => import("@/components/ChatWidget").catch(() => ({ default: () => null })),
+  { ssr: false, loading: () => null }
 );
 
 export default function ClientOnlyWidgets() {

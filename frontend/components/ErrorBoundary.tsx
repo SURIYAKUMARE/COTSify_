@@ -1,6 +1,5 @@
 "use client";
 import { Component, ReactNode } from "react";
-import { AlertTriangle, RefreshCw } from "lucide-react";
 
 interface Props { children: ReactNode }
 interface State { hasError: boolean; message: string }
@@ -10,29 +9,23 @@ export default class ErrorBoundary extends Component<Props, State> {
     super(props);
     this.state = { hasError: false, message: "" };
   }
-
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, message: error.message };
+    return { hasError: true, message: error?.message || "Unknown error" };
   }
-
+  componentDidCatch() {}
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-          <div className="text-center max-w-md">
-            <div className="w-16 h-16 bg-red-950 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-400" />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
-            <p className="text-gray-400 text-sm mb-6">{this.state.message || "An unexpected error occurred."}</p>
-            <button
-              onClick={() => { this.setState({ hasError: false, message: "" }); window.location.reload(); }}
-              className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-semibold px-5 py-2.5 rounded-xl transition-colors mx-auto"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Reload page
-            </button>
-          </div>
+        <div style={{ minHeight: "100vh", background: "#030712", color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, padding: 24 }}>
+          <div style={{ fontSize: 48 }}>⚠️</div>
+          <h2 style={{ fontSize: 20, fontWeight: "bold" }}>Something went wrong</h2>
+          <p style={{ color: "#9ca3af", fontSize: 14 }}>{this.state.message}</p>
+          <button
+            onClick={() => { this.setState({ hasError: false, message: "" }); }}
+            style={{ background: "#06b6d4", color: "#030712", border: "none", padding: "10px 24px", borderRadius: 12, cursor: "pointer", fontWeight: "bold" }}
+          >
+            Try again
+          </button>
         </div>
       );
     }
