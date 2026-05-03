@@ -42,7 +42,10 @@ export default function SignInPage() {
     setSubmitting(true);
     const { error } = await sb.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/` },
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        queryParams: { access_type: "offline", prompt: "consent" },
+      },
     });
     if (error) { setError(error.message); setSubmitting(false); }
   };
@@ -165,6 +168,9 @@ export default function SignInPage() {
                     placeholder="98765 43210" />
                 </div>
                 <p className="text-xs text-gray-500 mt-1.5">OTP via SMS — requires Twilio in Supabase</p>
+                <p className="text-xs text-amber-500 mt-1">
+                  💡 Test mode: Go to Supabase → Auth → Phone → add test number with OTP <b>123456</b>
+                </p>
               </div>
               <button type="submit" disabled={submitting}
                 className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-gray-950 font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">

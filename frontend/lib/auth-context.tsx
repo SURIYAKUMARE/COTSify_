@@ -7,6 +7,7 @@ export interface AppUser {
   email: string;
   full_name?: string;
   avatar_url?: string;
+  phone?: string;
   provider: "guest" | "supabase";
 }
 
@@ -20,8 +21,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
+  user: null, loading: true,
   signInGuest: async () => ({}),
   signUpGuest: async () => ({}),
   signOut: async () => {},
@@ -29,33 +29,64 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 const GUEST_KEY = "cotsify_guest_user";
+const SUPABASE_USER_KEY = "cotsify_supabase_user";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const buildUser = (supaUser: any): AppUser => ({
-    id: supaUser.id,
-    email: supaUser.email || "",
-    full_name:
-      supaUser.user_metadata?.full_name ||
-      supaUser.user_metadata?.name ||
-      supaUser.email?.split("@")[0],
-    avatar_url: supaUser.user_metadata?.avatar_url,
-    provider: "supabase",
-  });
+  const buildUser = (supaUser: any): AppUser => {
+    const u: AppUser = {
+      id: supaUser.id,
+      email: supaUser.email || supaUser.phone || "",
+      full_name:
+        supaUser.user_metadata?.full_name ||
+        supaUser.user_metadata?.name ||
+        supaUser.user_metadata?.email?.split("@")[0] ||
+        supaUser.email?.split("@")[0] ||
+        "User",
+      avatar_url:
+        supaUser.user_metadata?.avatar_url ||
+        supaUser.user_metadata?.picture,
+      phone: supaUser.phone,
+      provider: "supabase",
+    };
+    // Persist to localStorage so profile page always has data
+    try { localStorage.setItem(SUPABASE_USER_KEY, JSON.stringify(u)); } catch {}
+    return u;
+  };
 
   useEffect(() => {
     const sb = getSupabaseClient();
     if (sb) {
+      // First check localStorage cache for instant load
+      try {
+        const cached = localStorage.getItem(SUPABASE_USER_KEY);
+        if (cached) setUser(JSON.parse(cached));
+      } catch {}
+
       sb.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) setUser(buildUser(session.user));
-        else loadGuest();
+        if (session?.user) {
+          setUser(buildUser(session.user));
+        } else {
+          // Clear supabase cache, try guest
+          try { localStorage.removeItem(SUPABASE_USER_KEY); } catch {}
+          loadGuest();
+        }
+        setLoading(false);
+      }).catch(() => {
+        loadGuest();
         setLoading(false);
       });
-      const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) setUser(buildUser(session.user));
-        else loadGuest();
+
+      const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+        if (session?.user) {
+          setUser(buildUser(session.user));
+        } else {
+          try { localStorage.removeItem(SUPABASE_USER_KEY); } catch {}
+          if (event === "SIGNED_OUT") setUser(null);
+          else loadGuest();
+        }
         setLoading(false);
       });
       return () => subscription.unsubscribe();
@@ -75,23 +106,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (data: { full_name?: string; avatar_url?: string }) => {
     if (!user) return { error: "Not signed in" };
-
     if (user.provider === "supabase") {
       const sb = getSupabaseClient();
       if (!sb) return { error: "Supabase not configured" };
-      const { data: updated, error } = await sb.auth.updateUser({
-        data: {
-          full_name: data.full_name,
-          avatar_url: data.avatar_url,
-        },
-      });
+      const { data: updated, error } = await sb.auth.updateUser({ data });
       if (error) return { error: error.message };
       if (updated.user) setUser(buildUser(updated.user));
       return {};
     } else {
-      // Guest mode — update localStorage
       const updated: AppUser = { ...user, ...data };
-      localStorage.setItem(GUEST_KEY, JSON.stringify(updated));
+      try { localStorage.setItem(GUEST_KEY, JSON.stringify(updated)); } catch {}
       setUser(updated);
       return {};
     }
@@ -101,38 +125,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!email || !password) return { error: "Email and password required" };
     if (password.length < 6) return { error: "Password must be at least 6 characters" };
     const newUser: AppUser = {
-      id: crypto.randomUUID(),
-      email,
+      id: crypto.randomUUID(), email,
       full_name: fullName || email.split("@")[0],
       provider: "guest",
     };
-    localStorage.setItem(GUEST_KEY, JSON.stringify(newUser));
+    try { localStorage.setItem(GUEST_KEY, JSON.stringify(newUser)); } catch {}
     setUser(newUser);
     return {};
   };
 
   const signInGuest = async (email: string, password: string) => {
     if (!email || !password) return { error: "Email and password required" };
-    const stored = localStorage.getItem(GUEST_KEY);
-    if (stored) {
-      const existing: AppUser = JSON.parse(stored);
-      if (existing.email === email) { setUser(existing); return {}; }
-    }
+    try {
+      const stored = localStorage.getItem(GUEST_KEY);
+      if (stored) {
+        const existing: AppUser = JSON.parse(stored);
+        if (existing.email === email) { setUser(existing); return {}; }
+      }
+    } catch {}
     const newUser: AppUser = {
-      id: crypto.randomUUID(),
-      email,
+      id: crypto.randomUUID(), email,
       full_name: email.split("@")[0],
       provider: "guest",
     };
-    localStorage.setItem(GUEST_KEY, JSON.stringify(newUser));
+    try { localStorage.setItem(GUEST_KEY, JSON.stringify(newUser)); } catch {}
     setUser(newUser);
     return {};
   };
 
   const signOut = async () => {
     const sb = getSupabaseClient();
-    if (sb) await sb.auth.signOut();
-    localStorage.removeItem(GUEST_KEY);
+    if (sb) { try { await sb.auth.signOut(); } catch {} }
+    try {
+      localStorage.removeItem(GUEST_KEY);
+      localStorage.removeItem(SUPABASE_USER_KEY);
+    } catch {}
     setUser(null);
   };
 

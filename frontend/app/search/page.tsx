@@ -26,6 +26,7 @@ function SearchContent() {
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (query) handleSearch(query);
@@ -38,16 +39,20 @@ function SearchContent() {
     setResult(null);
     setComparisons([]);
     setSaved(false);
+    // Combine title + description for richer analysis
+    const fullQuery = description.trim()
+      ? `${title}. Additional details: ${description}`
+      : title;
     try {
-      const data = await analyzeProject(title);
-      setResult(data);
+      const data = await analyzeProject(fullQuery);
+      // Always use the original title for display
+      setResult({ ...data, project_title: title });
       setActiveTab("hardware");
-      // Auto-fetch price comparisons for hardware
       setLoadingCompare(true);
       const bulk = await compareBulk(data.hardware.slice(0, 8));
       setComparisons(bulk);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || "Analysis failed. Is the backend running?");
+      setError(e?.response?.data?.detail || "Analysis failed. Please try again.");
     } finally {
       setLoading(false);
       setLoadingCompare(false);
@@ -96,25 +101,35 @@ function SearchContent() {
       {/* Search bar */}
       <div className="max-w-2xl mx-auto mb-10">
         <h1 className="text-2xl font-bold text-center mb-6">What are you building?</h1>
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="e.g. Smart Irrigation System using IoT"
-              className="w-full bg-gray-900 border border-gray-700 rounded-xl pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-600 transition-colors"
-            />
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="e.g. Smart Irrigation System using IoT"
+                className="w-full bg-gray-900 border border-gray-700 rounded-xl pl-11 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-600 transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !inputValue.trim()}
+              className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-gray-950 font-semibold px-5 py-3 rounded-xl transition-colors flex items-center gap-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              Analyze
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={loading || !inputValue.trim()}
-            className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-gray-950 font-semibold px-5 py-3 rounded-xl transition-colors flex items-center gap-2"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            Analyze
-          </button>
+          {/* Description box */}
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Optional: Add more details about your project (e.g. budget, specific requirements, environment)..."
+            rows={2}
+            className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-600 transition-colors resize-none text-sm"
+          />
         </form>
       </div>
 
