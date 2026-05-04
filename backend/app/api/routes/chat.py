@@ -142,7 +142,7 @@ async def chat(request: ChatRequest):
     history = [{"role": m.role, "content": m.content} for m in request.messages[:-1]]
 
     # Try real OpenAI first
-    if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.strip() and not settings.OPENAI_API_KEY.startswith("sk-proj-Rq"):
+    if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.strip():
         try:
             from openai import AsyncOpenAI
             client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
@@ -172,7 +172,7 @@ async def chat_stream(request: ChatRequest):
     history = [{"role": m.role, "content": m.content} for m in request.messages[:-1]]
 
     # Try real OpenAI streaming
-    if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.strip() and not settings.OPENAI_API_KEY.startswith("sk-proj-Rq"):
+    if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.strip():
         try:
             from openai import AsyncOpenAI
             client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
